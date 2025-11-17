@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple API Test</title>
+</head>
+<body>
+    <h1>Simple API Test</h1>
+    <button onclick="testAPI()">Test API Connection</button>
+    <div id="result" style="margin-top: 20px;"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                resultDiv.innerHTML = 'Testing connection to: http://localhost:3001/books...';
+                
+                const response = await fetch('http://localhost:300/books');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>✅ SUCCESS! API is working!</h3>
+                    <p>Status: ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>❌ ERROR: API not working</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Make sure:</p>
+                    <ul>
+                        <li>Server is running on port 3000</li>
+                        <li>You typed: node server.js</li>
+                        <li>No errors in terminal</li>
+                    </ul>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

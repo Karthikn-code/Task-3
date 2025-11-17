@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Books API UI - Fixed</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        .response { background: #2c3e50; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Books API Tester - FIXED</h1>
+        <p>API Base URL: <code>http://localhost:3000</code></p>
+
+        <div class="section">
+            <h2>1. Get All Books</h2>
+            <button onclick="getAllBooks()">GET /books</button>
+        </div>
+
+        <div class="section">
+            <h2>2. Get Book by ID</h2>
+            <input type="number" id="getBookId" placeholder="Enter Book ID">
+            <button onclick="getBookById()">GET /books/:id</button>
+        </div>
+
+        <div class="section">
+            <h2>3. Add New Book</h2>
+            <input type="text" id="title" placeholder="Book Title">
+            <input type="text" id="author" placeholder="Author">
+            <button onclick="addBook()">POST /books</button>
+        </div>
+
+        <div class="section">
+            <h2>4. Update Book</h2>
+            <input type="number" id="updateId" placeholder="Book ID">
+            <input type="text" id="updateTitle" placeholder="New Title">
+            <input type="text" id="updateAuthor" placeholder="New Author">
+            <button onclick="updateBook()">PUT /books/:id</button>
+        </div>
+
+        <div class="section">
+            <h2>5. Delete Book</h2>
+            <input type="number" id="deleteId" placeholder="Book ID">
+            <button onclick="deleteBook()">DELETE /books/:id</button>
+            <button onclick="deleteAllBooks()" style="background: #e74c3c; color: white;">DELETE ALL BOOKS</button>
+        </div>
+
+        <div class="section">
+            <h2>API Response</h2>
+            <div id="response" class="response">Click any button to test...</div>
+        </div>
+
+        <div class="section">
+            <h2>Current Books</h2>
+            <div id="booksList">No books loaded yet</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        function displayResponse(method, url, data, status) {
+            document.getElementById('response').innerHTML = 
+                `<strong>${method} ${url}</strong> (Status: ${status})\n` +
+                JSON.stringify(data, null, 2);
+        }
+
+        function displayMessage(message, isError = false) {
+            const msg = document.createElement('div');
+            msg.innerHTML = message;
+            msg.className = isError ? 'error' : 'success';
+            msg.style.padding = '10px';
+            msg.style.margin = '5px 0';
+            msg.style.background = isError ? '#ffebee' : '#e8f5e8';
+            document.getElementById('response').prepend(msg);
+        }
+
+        async function getAllBooks() {
+            try {
+                const response = await fetch(`${API_BASE}/books`);
+                const data = await response.json();
+                displayResponse('GET', '/books', data, response.status);
+                
+                if (data.success) {
+                    document.getElementById('booksList').innerHTML = 
+                        data.data.map(book => 
+                            `<div>📖 <strong>${book.title}</strong> by ${book.author} (ID: ${book.id})</div>`
+                        ).join('');
+                }
+            } catch (error) {
+                displayMessage('Error: ' + error.message, true);
+            }
+        }
+
+        async function getBookById() {
+            const id = document.getElementById('getBookId').value;
+            if (!id) return displayMessage('Please enter Book ID', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/books/${id}`);
+                const data = await response.json();
+                displayResponse('GET', `/books/${id}`, data, response.status);
+            } catch (error) {
+                displayMessage('Error: ' + error.message, true);
+            }
+        }
+
+        async function addBook() {
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            if (!title || !author) return displayMessage('Please enter title and author', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/books`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, author })
+                });
+                const data = await response.json();
+                displayResponse('POST', '/books', data, response.status);
+                
+                if (data.success) {
+                    document.getElementById('title').value = '';
+                    document.getElementById('author').value = '';
+                    getAllBooks();
+                }
+            } catch (error) {
+                displayMessage('Error: ' + error.message, true);
+            }
+        }
+
+        async function updateBook() {
+            const id = document.getElementById('updateId').value;
+            const title = document.getElementById('updateTitle').value;
+            const author = document.getElementById('updateAuthor').value;
+            if (!id || !title || !author) return displayMessage('Please fill all fields', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/books/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, author })
+                });
+                const data = await response.json();
+                displayResponse('PUT', `/books/${id}`, data, response.status);
+                
+                if (data.success) {
+                    getAllBooks();
+                }
+            } catch (error) {
+                displayMessage('Error: ' + error.message, true);
+            }
+        }
+
+        async function deleteBook() {
+            const id = document.getElementById('deleteId').value;
+            if (!id) return displayMessage('Please enter Book ID', true);
+            if (!confirm('Delete this book?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/books/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                displayResponse('DELETE', `/books/${id}`, data, response.status);
+                
+                if (data.success) {
+                    getAllBooks();
+                }
+            } catch (error) {
+                displayMessage('Error: ' + error.message, true);
+            }
+        }
+
+        async function deleteAllBooks() {
+            if (!confirm('Delete ALL books? This cannot be undone!')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/books`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                displayResponse('DELETE', '/books', data, response.status);
+                
+                if (data.success) {
+                    getAllBooks();
+                }
+            } catch (error) {
+                displayMessage('Error: ' + error.message, true);
+            }
+        }
+
+        // Load books on page load
+        getAllBooks();
+    </script>
+</body>
+</html>

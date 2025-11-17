@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Books API UI - Working Version</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #2c3e50; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section { 
+            margin: 25px 0; 
+            padding: 20px; 
+            border: 1px solid #e1e8ed; 
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        button { 
+            padding: 12px 20px; 
+            margin: 8px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-get { background: #3498db; color: white; }
+        .btn-post { background: #27ae60; color: white; }
+        .btn-put { background: #f39c12; color: white; }
+        .btn-delete { background: #e74c3c; color: white; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        input { 
+            padding: 12px; 
+            margin: 8px; 
+            width: 250px; 
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .response { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .book-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Books API Testing Interface</h1>
+        
+        <div class="section">
+            <h2>🚀 Quick Start</h2>
+            <button class="btn-get" onclick="getAllBooks()">GET ALL BOOKS</button>
+            <div id="quickStatus"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 Get Book by ID</h2>
+            <input type="number" id="getBookId" placeholder="Enter Book ID (1, 2, 3...)">
+            <button class="btn-get" onclick="getBookById()">GET BOOK</button>
+        </div>
+
+        <div class="section">
+            <h2>➕ Add New Book</h2>
+            <input type="text" id="title" placeholder="Book Title">
+            <input type="text" id="author" placeholder="Author Name">
+            <button class="btn-post" onclick="addBook()">ADD BOOK</button>
+        </div>
+
+        <div class="section">
+            <h2>✏️ Update Book</h2>
+            <input type="number" id="updateId" placeholder="Book ID to update">
+            <input type="text" id="updateTitle" placeholder="New Title">
+            <input type="text" id="updateAuthor" placeholder="New Author">
+            <button class="btn-put" onclick="updateBook()">UPDATE BOOK</button>
+        </div>
+
+        <div class="section">
+            <h2>🗑️ Delete Operations</h2>
+            <input type="number" id="deleteId" placeholder="Book ID to delete">
+            <button class="btn-delete" onclick="deleteBook()">DELETE BOOK</button>
+            <button class="btn-delete" onclick="deleteAllBooks()" style="background: #c0392b;">DELETE ALL BOOKS</button>
+        </div>
+
+        <div class="section">
+            <h2>📡 API Response</h2>
+            <div id="response" class="response">
+Click any button above to test the API...
+The response will appear here.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📖 Current Books in Library</h2>
+            <div id="booksList">
+                <em>Click "GET ALL BOOKS" to load the books...</em>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:3001';
+        
+        // Display API response
+        function displayResponse(method, endpoint, data, status) {
+            const responseDiv = document.getElementById('response');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const responseObj = {
+                timestamp: timestamp,
+                method: method,
+                endpoint: endpoint,
+                statusCode: status,
+                response: data
+            };
+            
+            responseDiv.textContent = JSON.stringify(responseObj, null, 2);
+        }
+
+        // Display status message
+        function displayStatus(message, isSuccess = true) {
+            const statusDiv = document.getElementById('quickStatus');
+            statusDiv.innerHTML = `
+                <div class="status ${isSuccess ? 'status-success' : 'status-error'}">
+                    ${isSuccess ? '✅' : '❌'} ${message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // 1. Get all books
+        async function getAllBooks() {
+            try {
+                displayStatus('Fetching books from API...');
+                
+                const response = await fetch(`${API_BASE_URL}/books`);
+                const data = await response.json();
+                
+                displayResponse('GET', '/books', data, response.status);
+                
+                if (data.success && data.data) {
+                    displayBooks(data.data);
+                    displayStatus(`✅ Success! Found ${data.data.length} books`);
+                } else {
+                    displayStatus('❌ Failed to fetch books', false);
+                }
+            } catch (error) {
+                displayResponse('GET', '/books', { error: error.message }, 'Network Error');
+                displayStatus(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+
+        // 2. Get book by ID
+        async function getBookById() {
+            const bookId = document.getElementById('getBookId').value.trim();
+            
+            if (!bookId) {
+                displayStatus('❌ Please enter a Book ID', false);
+                return;
+            }
+
+            try {
+                displayStatus(`Searching for book ID: ${bookId}...`);
+                
+                const response = await fetch(`${API_BASE_URL}/books/${bookId}`);
+                const data = await response.json();
+                
+                displayResponse('GET', `/books/${bookId}`, data, response.status);
+                
+                if (data.success) {
+                    displayStatus(`✅ Found: ${data.data.title}`);
+                } else {
+                    displayStatus(`❌ ${data.message}`, false);
+                }
+            } catch (error) {
+                displayResponse('GET', `/books/${bookId}`, { error: error.message }, 'Network Error');
+                displayStatus(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+
+        // 3. Add new book
+        async function addBook() {
+            const title = document.getElementById('title').value.trim();
+            const author = document.getElementById('author').value.trim();
+            
+            if (!title || !author) {
+                displayStatus('❌ Please enter both title and author', false);
+                return;
+            }
+
+            try {
+                displayStatus('Adding new book...');
+                
+                const response = await fetch(`${API_BASE_URL}/books`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title, author })
+                });
+                
+                const data = await response.json();
+                displayResponse('POST', '/books', data, response.status);
+                
+                if (data.success) {
+                    displayStatus(`✅ Book added successfully! ID: ${data.data.id}`);
+                    // Clear form
+                    document.getElementById('title').value = '';
+                    document.getElementById('author').value = '';
+                    // Refresh books list
+                    getAllBooks();
+                } else {
+                    displayStatus(`❌ ${data.message}`, false);
+                }
+            } catch (error) {
+                displayResponse('POST', '/books', { error: error.message }, 'Network Error');
+                displayStatus(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+
+        // 4. Update book
+        async function updateBook() {
+            const id = document.getElementById('updateId').value.trim();
+            const title = document.getElementById('updateTitle').value.trim();
+            const author = document.getElementById('updateAuthor').value.trim();
+            
+            if (!id || !title || !author) {
+                displayStatus('❌ Please fill all fields', false);
+                return;
+            }
+
+            try {
+                displayStatus(`Updating book ID: ${id}...`);
+                
+                const response = await fetch(`${API_BASE_URL}/books/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title, author })
+                });
+                
+                const data = await response.json();
+                displayResponse('PUT', `/books/${id}`, data, response.status);
+                
+                if (data.success) {
+                    displayStatus(`✅ Book updated successfully!`);
+                    // Clear form
+                    document.getElementById('updateId').value = '';
+                    document.getElementById('updateTitle').value = '';
+                    document.getElementById('updateAuthor').value = '';
+                    // Refresh books list
+                    getAllBooks();
+                } else {
+                    displayStatus(`❌ ${data.message}`, false);
+                }
+            } catch (error) {
+                displayResponse('PUT', `/books/${id}`, { error: error.message }, 'Network Error');
+                displayStatus(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+
+        // 5. Delete book
+        async function deleteBook() {
+            const id = document.getElementById('deleteId').value.trim();
+            
+            if (!id) {
+                displayStatus('❌ Please enter a Book ID', false);
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete book #${id}?`)) {
+                return;
+            }
+
+            try {
+                displayStatus(`Deleting book ID: ${id}...`);
+                
+                const response = await fetch(`${API_BASE_URL}/books/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                displayResponse('DELETE', `/books/${id}`, data, response.status);
+                
+                if (data.success) {
+                    displayStatus(`✅ Book deleted successfully!`);
+                    document.getElementById('deleteId').value = '';
+                    getAllBooks();
+                } else {
+                    displayStatus(`❌ ${data.message}`, false);
+                }
+            } catch (error) {
+                displayResponse('DELETE', `/books/${id}`, { error: error.message }, 'Network Error');
+                displayStatus(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+
+        // 6. Delete all books
+        async function deleteAllBooks() {
+            if (!confirm('⚠️ DANGER! This will delete ALL books. Are you sure?')) {
+                return;
+            }
+
+            try {
+                displayStatus('Deleting all books...');
+                
+                const response = await fetch(`${API_BASE_URL}/books`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                displayResponse('DELETE', '/books', data, response.status);
+                
+                if (data.success) {
+                    displayStatus(`✅ All books deleted successfully!`);
+                    getAllBooks();
+                } else {
+                    displayStatus(`❌ ${data.message}`, false);
+                }
+            } catch (error) {
+                displayResponse('DELETE', '/books', { error: error.message }, 'Network Error');
+                displayStatus(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+
+        // Display books in a nice grid
+        function displayBooks(books) {
+            const booksListDiv = document.getElementById('booksList');
+            
+            if (!books || books.length === 0) {
+                booksListDiv.innerHTML = '<em>No books found in the library.</em>';
+                return;
+            }
+
+            booksListDiv.innerHTML = `
+                <div class="books-grid">
+                    ${books.map(book => `
+                        <div class="book-card">
+                            <h3>${book.title}</h3>
+                            <p><strong>Author:</strong> ${book.author}</p>
+                            <p><strong>ID:</strong> ${book.id}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Initialize - load books when page loads
+        window.onload = function() {
+            displayStatus('Page loaded. Click "GET ALL BOOKS" to start!');
+        };
+    </script>
+</body>
+</html>
